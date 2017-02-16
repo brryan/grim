@@ -8,9 +8,9 @@ namespace params
   // Grid size options
   int N1 = 256;
   int N2 = 256;
-  int N3 = 128;
-  int N3Full = 128;
-  int dim = 3;
+  int N3 = 1;
+  int N3Full = 1;
+  int dim = 2;
   int numGhost = 3;
  
   // (Re)start options
@@ -49,8 +49,8 @@ namespace params
   double InitialPerturbationAmplitude = 4.e-2;
 
   // EMHD model
-  int conduction = 1;
-  int viscosity  = 1;
+  int conduction = 0;
+  int viscosity  = 0;
   int highOrderTermsConduction = 1.;
   int highOrderTermsViscosity = 1.;
   // Phi and Psi from Chandra et al. 2015
@@ -116,8 +116,11 @@ namespace params
   double linesearchfloor = 1.e-24;
 
   // Linear solver options
-  int linearSolver = linearSolvers::GPU_BATCH_SOLVER;
-  
+  int linearSolver = linearSolvers::CPU_BATCH_SOLVER;
+
+  // Solver option
+  int solver = solvers::IDEAL;
+
 };
 
 namespace vars

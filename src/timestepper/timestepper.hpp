@@ -44,6 +44,13 @@ class timeStepper
   double lineSearchTime;
   double jacobianAssemblyTime;
 
+  void idealSolver(grid &primGuess,                                   
+                   int &numreads,
+                   int &numwrites
+                  );
+  void timeStepFluidCons(const double dt
+                        );
+
   af::seq domainX1, domainX2, domainX3;
   array residualMask;
 

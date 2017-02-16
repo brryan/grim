@@ -19,7 +19,7 @@ project(grim)
 # Options for gcc:
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -O3 -g -fopenmp")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++11 -g -fopenmp")
-set(ARCH "CUDA") # Choose CPU/OpenCL/CUDA
+set(ARCH "OpenCL") # Choose CPU/OpenCL/CUDA
 
 # Set custom install folders here
 # 
@@ -60,10 +60,19 @@ set(ARCH "CUDA") # Choose CPU/OpenCL/CUDA
 #set(ArrayFire_ROOT_DIR "/work/03669/tg829690/arrayfire_with_batch_solver/arrayfire/build/package")
 
 # Configuration for Deathstar
-set(PETSC_DIR "/home/mani/Downloads/petsc_3.7.5_installation")
+#set(PETSC_DIR "/home/mani/Downloads/petsc_3.7.5_installation")
 #set(YAML_ROOT_DIR "/global/home/users/manic/yaml-cpp/build")
-set(ArrayFire_ROOT_DIR "/home/mani/Downloads/arrayfire/build_gcc/package")
-set(INTEL_MKL_ROOT_DIR "/opt/intel/mkl")
+#set(ArrayFire_ROOT_DIR "/home/mani/Downloads/arrayfire/build_gcc/package")
+#set(INTEL_MKL_ROOT_DIR "/opt/intel/mkl")
+
+# Configuration for meade
+set(PETSC_DIR "/home/brryan/Software/petsc_3.7.5_installation")                  
+set(INTEL_MKL_ROOT_DIR "/home/brryan/Software/intel/mkl")                        
+set(ArrayFire_ROOT_DIR "/home/brryan/Software/arrayfire_install")                
+set(CC "/home/brryan/Software/petsc_3.7.5_installation/bin/mpicc")               
+set(CXX "/home/brryan/Software/petsc_3.7.5_installation/bin/mpicxx")             
+set(CMAKE_C_COMPILER "/home/brryan/Software/petsc_3.7.5_installation/bin/mpicc") 
+set(CMAKE_CXX_COMPILER "/home/brryan/Software/petsc_3.7.5_installation/bin/mpic++")
 
 # Double or float precision?
 set(REAL "double")
@@ -83,7 +92,7 @@ set(REAL "double")
 # 12) buoyancy_instabilities
 # 13) bondi_viscous
 
-set(PROBLEM "shock_tests")
+set(PROBLEM "torus")
 # Now choose problem specific options in the respective problem folder in
 # src/problem/
 # ------------------------------END OF USER OPTIONS---------------------------#

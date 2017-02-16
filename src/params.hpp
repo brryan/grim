@@ -65,6 +65,14 @@ namespace reconstructionOptions
   };
 };
 
+namespace solvers
+{
+  enum
+  {
+    IDEAL, AGNOSTIC
+  };
+}
+
 namespace riemannSolvers
 {
   enum
@@ -148,6 +156,7 @@ namespace params
   extern double JacobianAssembleEpsilon;
   extern double linesearchfloor;
   extern int    linearSolver;
+  extern int    solver;
 
   //Atmosphere parameters
   extern double MaxLorentzFactor;

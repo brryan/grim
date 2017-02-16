@@ -105,7 +105,17 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
   lineSearchTime       = 0.;
   linearSolverTime     = 0.;
   af::timer solverTimer = af::timer::start();
-  solve(*prim);
+  /* Use simple ideal solver if able and requested */
+  if (params::conduction == 0 && 
+      params::viscosity == 0 &&
+      params::solver == solvers::IDEAL)
+  {
+    timeStepFluidCons(0.5*dt);
+    int numreads, numwrites;
+    idealSolver(*prim, numreads, numwrites);
+  } else {
+    solve(*prim);
+  }
   double solverTime = af::timer::stop(solverTimer);
 
   /* Copy solution to primHalfStepGhosted. WARNING: Right now
@@ -254,7 +264,17 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
   lineSearchTime       = 0.;
   linearSolverTime     = 0.;
   solverTimer = af::timer::start();
-  solve(*prim);
+  /* Use simple ideal solver if able and requested */
+  if (params::conduction == 0 && 
+      params::viscosity == 0 &&
+      params::solver == solvers::IDEAL)
+  {
+    timeStepFluidCons(dt);
+    int numreads, numwrites;
+    idealSolver(*prim, numreads, numwrites);
+  } else {
+    solve(*prim);
+  }
   solverTime = af::timer::stop(solverTimer);
 
   /* Copy solution to primOldGhosted */
@@ -399,4 +419,19 @@ double timeStepper::computeDt(int &numReads, int &numWrites)
     newDt = params::maxDtIncrement*dt;
   }
   dt = newDt;
+}
+
+
+void timeStepper::timeStepFluidCons(const double dt
+                                   )
+{
+  /* consOld, divFluxes, and sourcesExplicit have already been set in timeStep()
+   */
+  for (int var=0; var <= vars::U3; var++)
+  {
+    cons->vars[var] = consOld->vars[var] 
+                      - dt*(divFluxes->vars[var] 
+                            - sourcesExplicit->vars[var]
+                           );
+  }
 }
