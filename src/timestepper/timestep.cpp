@@ -104,19 +104,31 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
   jacobianAssemblyTime = 0.;
   lineSearchTime       = 0.;
   linearSolverTime     = 0.;
-  af::timer solverTimer = af::timer::start();
   /* Use simple ideal solver if able and requested */
+  af::sync();
+  af::timer solverTimer;
+  af::timer stepConsTimer;
+  double solverTime, stepConsTime;
   if (params::conduction == 0 && 
       params::viscosity == 0 &&
       params::solver == solvers::IDEAL)
   {
+    stepConsTimer = af::timer::start();
     timeStepFluidCons(0.5*dt);
+    af::sync();
+    stepConsTime = af::timer::stop(stepConsTimer);
+
     int numreads, numwrites;
+    solverTimer = af::timer::start();
     idealSolver(*prim, numreads, numwrites);
+    af::sync();
+    solverTime = af::timer::stop(solverTimer);
   } else {
+    solverTimer = af::timer::start();
     solve(*prim);
+    solverTime = af::timer::stop(solverTimer);
   }
-  double solverTime = af::timer::stop(solverTimer);
+  //double solverTime = af::timer::stop(solverTimer);
 
   /* Copy solution to primHalfStepGhosted. WARNING: Right now
    * primHalfStep->vars[var] points to prim->vars[var]. Might need to do a deep
@@ -138,7 +150,7 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
 
   double halfStepTime = af::timer::stop(halfStepTimer);
 
-  PetscPrintf(PETSC_COMM_WORLD, "\n");
+  /*PetscPrintf(PETSC_COMM_WORLD, "\n");
   PetscPrintf(PETSC_COMM_WORLD, "    ---Performance report--- \n");
   PetscPrintf(PETSC_COMM_WORLD, "     Boundary Conditions : %g secs, %g %\n",
                                  boundaryTime, boundaryTime/halfStepTime * 100
@@ -172,6 +184,10 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
                                  lineSearchTime,
                                  lineSearchTime/halfStepTime * 100
              );
+  PetscPrintf(PETSC_COMM_WORLD, "     Fluid cons          : %g secs, %g %\n",
+                                 stepConsTime,
+                                 stepConsTime/halfStepTime * 100
+             );
   PetscPrintf(PETSC_COMM_WORLD, "     Induction equation  : %g secs, %g %\n",
                                  inductionEqnTime,
                                  inductionEqnTime/halfStepTime * 100
@@ -186,10 +202,11 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
              );
   PetscPrintf(PETSC_COMM_WORLD, "     Half step time      : %g secs\n\n",
                                  halfStepTime
-             );
+             );*/
 
   /* Now take the full step */
   PetscPrintf(PETSC_COMM_WORLD, "  ---Full step--- \n");
+  af::sync();
   af::timer fullStepTimer = af::timer::start();
 
   currentStep = timeStepperSwitches::FULL_STEP;
@@ -201,6 +218,7 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
                                       *primHalfStep
                                      );
   setProblemSpecificBCs(numReads,numWrites);
+  af::sync();
   boundaryTime = af::timer::stop(boundaryTimer);
 
   af::timer elemHalfStepTimer = af::timer::start();
@@ -209,6 +227,7 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
                    );
   numReads  += numReadsElemSet;
   numWrites += numWritesElemSet; 
+  af::sync();
   double elemHalfStepTime = af::timer::stop(elemHalfStepTimer);
 
   explicitSourcesTimer = af::timer::start();
@@ -218,8 +237,10 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
                                       );
   numReads  += numReadsExplicitSouces;
   numWrites += numWritesExplicitSouces;
+  af::sync();
   explicitSourcesTime = af::timer::stop(explicitSourcesTimer);
 
+  af::timer implicitSourcesTimer = af::timer::start();
   elemOld->computeImplicitSources(*sourcesImplicitOld,
                                   elemHalfStep->tau,
                                   numReadsImplicitSources,
@@ -227,11 +248,14 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
                                  );
   numReads  += numReadsImplicitSources;
   numWrites += numWritesImplicitSources;
+  af::sync();
+  double implicitSourcesTime = af::timer::stop(implicitSourcesTimer);
 
   divFluxTimer = af::timer::start();
   computeDivOfFluxes(*primHalfStep, numReadsDivFluxes, numWritesDivFluxes);
   numReads  += numReadsDivFluxes;
   numWrites += numWritesDivFluxes;
+  af::sync();
   divFluxTime = af::timer::stop(divFluxTimer);
 
   inductionEqnTimer = af::timer::start();
@@ -248,8 +272,7 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
   prim->vars[vars::B2].eval();
   prim->vars[vars::B3] = cons->vars[vars::B3]/geomCenter->g;
   prim->vars[vars::B3].eval();
-  inductionEqnTime = af::timer::stop(inductionEqnTimer);
-
+  
   primGuessPlusEps->vars[vars::B1] = prim->vars[vars::B1];
   primGuessPlusEps->vars[vars::B2] = prim->vars[vars::B2];
   primGuessPlusEps->vars[vars::B3] = prim->vars[vars::B3];
@@ -257,26 +280,37 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
   primGuessLineSearchTrial->vars[vars::B1] = prim->vars[vars::B1];
   primGuessLineSearchTrial->vars[vars::B2] = prim->vars[vars::B2];
   primGuessLineSearchTrial->vars[vars::B3] = prim->vars[vars::B3];
+  af::sync();
+  inductionEqnTime = af::timer::stop(inductionEqnTimer);
 
   /* Solve dU/dt + div.F - S = 0 to get prim at n+1/2. NOTE: prim already has
    * primHalfStep as a guess */
-  jacobianAssemblyTime = 0.;
-  lineSearchTime       = 0.;
-  linearSolverTime     = 0.;
-  solverTimer = af::timer::start();
+  
   /* Use simple ideal solver if able and requested */
   if (params::conduction == 0 && 
       params::viscosity == 0 &&
       params::solver == solvers::IDEAL)
   {
+    stepConsTimer = af::timer::start();
     timeStepFluidCons(dt);
-    int numreads, numwrites;
-    idealSolver(*prim, numreads, numwrites);
-  } else {
-    solve(*prim);
-  }
-  solverTime = af::timer::stop(solverTimer);
+    af::sync();
+    stepConsTime = af::timer::stop(stepConsTimer);
 
+    int numreads, numwrites;
+    solverTimer = af::timer::start();
+    idealSolver(*prim, numreads, numwrites);
+    af::sync();
+    solverTime = af::timer::stop(solverTimer);
+  } else {
+    jacobianAssemblyTime = 0.;
+    lineSearchTime       = 0.;
+    linearSolverTime     = 0.;
+    solverTimer = af::timer::start();
+    solve(*prim);
+    solverTime = af::timer::stop(solverTimer);
+  }
+
+  af::timer fullStepCommTimer = af::timer::start();
   /* Copy solution to primOldGhosted */
   for (int var=0; var < prim->numVars; var++)
   {
@@ -285,13 +319,14 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
     numWrites += 1;
   }
   /* Compute diagnostics */
-  af::timer fullStepCommTimer = af::timer::start();
   primOld->communicate();
+  af::sync();
   double fullStepCommTime = af::timer::stop(fullStepCommTimer);
 
   time += dt;
   af::timer fullStepDiagTimer = af::timer::start();
   fullStepDiagnostics(numReads,numWrites);
+  af::sync();
   double fullStepDiagTime = af::timer::stop(fullStepDiagTimer);
 
   /* done */
@@ -311,6 +346,10 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
                                explicitSourcesTime, 
                                explicitSourcesTime/fullStepTime * 100
              );
+  PetscPrintf(PETSC_COMM_WORLD, "     Implciit sources    : %g secs, %g %\n",
+                               implicitSourcesTime, 
+                               implicitSourcesTime/fullStepTime * 100
+             );
   PetscPrintf(PETSC_COMM_WORLD, "     Divergence of fluxes: %g secs, %g %\n",
                                  divFluxTime, divFluxTime/fullStepTime * 100
              );
@@ -328,6 +367,10 @@ void timeStepper::timeStep(int &numReads, int &numWrites)
   PetscPrintf(PETSC_COMM_WORLD, "     |- Linesearch       : %g secs, %g %\n",
                                  lineSearchTime,
                                  lineSearchTime/fullStepTime * 100
+             );
+  PetscPrintf(PETSC_COMM_WORLD, "     Fluid cons          : %g secs, %g %\n",
+                                 stepConsTime,
+                                 stepConsTime/fullStepTime * 100
              );
   PetscPrintf(PETSC_COMM_WORLD, "     Induction equation  : %g secs, %g %\n",
                                  inductionEqnTime,
@@ -427,11 +470,15 @@ void timeStepper::timeStepFluidCons(const double dt
 {
   /* consOld, divFluxes, and sourcesExplicit have already been set in timeStep()
    */
+  std::vector<af::array *> arraysThatNeedEval{};
   for (int var=0; var <= vars::U3; var++)
   {
     cons->vars[var] = consOld->vars[var] 
                       - dt*(divFluxes->vars[var] 
                             - sourcesExplicit->vars[var]
                            );
+    arraysThatNeedEval.push_back(&cons->vars[var]);
   }
+
+  af::eval(arraysThatNeedEval.size(), &arraysThatNeedEval[0]);
 }

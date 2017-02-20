@@ -7,7 +7,8 @@ int main(int argc, char **argv)
 
   int world_rank;
   MPI_Comm_rank(PETSC_COMM_WORLD, &world_rank);
-  af::setDevice(world_rank%params::numDevices);
+  //af::setDevice(world_rank%params::numDevices);
+  af::setDevice(1);
 
   /* Local scope so that destructors of all classes are called before
    * PetscFinalize() */

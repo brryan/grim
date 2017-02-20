@@ -179,7 +179,7 @@ void fluidElement::set(const grid &prim,
   numReads  = 42;
   numWrites = 38;
   
-  std::vector<af::array *> arraysThatNeedEval{
+  /*std::vector<af::array *> arraysThatNeedEval{
       &gammaLorentzFactor,
           &uCon[0], &uCon[1], &uCon[2], &uCon[3],
           &uCov[0], &uCov[1], &uCov[2], &uCov[3],
@@ -195,11 +195,11 @@ void fluidElement::set(const grid &prim,
           &TUpDown[3][0], &TUpDown[3][1],
           &TUpDown[3][2], &TUpDown[3][3],
           &NUp[0], &NUp[1], &NUp[2], &NUp[3]
-          };
+          };*/
 
   if (params::conduction)
   {
-    arraysThatNeedEval.push_back(&q);
+    //arraysThatNeedEval.push_back(&q);
 
     numReads  += 1;
     numWrites += 1;
@@ -207,13 +207,13 @@ void fluidElement::set(const grid &prim,
 
   if (params::viscosity)
   {
-    arraysThatNeedEval.push_back(&deltaP);
+    //arraysThatNeedEval.push_back(&deltaP);
 
     numReads  += 1;
     numWrites += 1;
   }
 
-  af::eval(arraysThatNeedEval.size(), &arraysThatNeedEval[0]);
+  //af::eval(arraysThatNeedEval.size(), &arraysThatNeedEval[0]);
 }
 
 void fluidElement::computeFluxes(const int dir,
@@ -236,7 +236,7 @@ void fluidElement::computeFluxes(const int dir,
   flux.vars[vars::B2]  = g*(bCon[2]*uCon[dir] - bCon[dir]*uCon[2]);
   flux.vars[vars::B3]  = g*(bCon[3]*uCon[dir] - bCon[dir]*uCon[3]);
 
-  std::vector<af::array *> arraysThatNeedEval{
+  /*std::vector<af::array *> arraysThatNeedEval{
                 &flux.vars[vars::RHO],  
                 &flux.vars[vars::U],  
                 &flux.vars[vars::U1],  
@@ -245,14 +245,14 @@ void fluidElement::computeFluxes(const int dir,
                 &flux.vars[vars::B1],  
                 &flux.vars[vars::B2],  
                 &flux.vars[vars::B3]  
-              };
+              };*/
   numReads  = 12;
   numWrites = 8;
 
   if (params::conduction)
   {
     flux.vars[vars::Q] = g*(uCon[dir] * qTilde);
-    arraysThatNeedEval.push_back(&flux.vars[vars::Q]);
+    //arraysThatNeedEval.push_back(&flux.vars[vars::Q]);
     numReads++;
     numWrites++;
   }
@@ -260,12 +260,12 @@ void fluidElement::computeFluxes(const int dir,
   if (params::viscosity)
   {
     flux.vars[vars::DP] = g*(uCon[dir] * deltaPTilde);
-    arraysThatNeedEval.push_back(&flux.vars[vars::DP]);
+    //arraysThatNeedEval.push_back(&flux.vars[vars::DP]);
     numReads++;
     numWrites++;
   }
 
-  af::eval(arraysThatNeedEval.size(), &arraysThatNeedEval[0]);
+  //af::eval(arraysThatNeedEval.size(), &arraysThatNeedEval[0]);
 }
 
 void fluidElement::computeTimeDerivSources(const fluidElement &elemOld,

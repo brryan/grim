@@ -262,7 +262,7 @@ array pressureRho0W(const array rho0,
                    )
 {
   array pressure = ((w - rho0)*(params::adiabaticIndex - 1.)/params::adiabaticIndex);
-  pressure.eval();
+  //pressure.eval();
 
   return pressure;
 }
@@ -284,7 +284,7 @@ array gammaFunc(const array &BSqr,
                     / (QDotBWholeSqr*(W + WB) + W2*(QTildeSqr - WB*WB)) ; 
 
   array gamma = af::sqrt(1 + af::abs(uTildeSqr));
-  gamma.eval();
+  //gamma.eval();
 
   return gamma;
 }
@@ -306,7 +306,7 @@ array errFunc(const array &BSqr,
   array err = - Ep + Wp - p + 0.5*BSqr 
               + 0.5*(BSqr*QTildeSqr - QDotB*QDotB)
               / ((BSqr + W)*(BSqr + W)) ;
-  err.eval();
+  //err.eval();
 
   return err;
 }
@@ -329,9 +329,9 @@ void timeStepper::idealSolver(grid &primGuess,
 
   array BCon[NDIM];
   BCon[0] = zero;
-  BCon[1] = elem->B1 * lapse; BCon[1].eval();
-  BCon[2] = elem->B2 * lapse; BCon[2].eval();
-  BCon[3] = elem->B3 * lapse; BCon[3].eval();
+  BCon[1] = elem->B1 * lapse; //BCon[1].eval();
+  BCon[2] = elem->B2 * lapse; //BCon[2].eval();
+  BCon[3] = elem->B3 * lapse; //BCon[3].eval();
 
   array BCov[NDIM];
   for (int mu=0; mu<NDIM; mu++)
@@ -340,17 +340,17 @@ void timeStepper::idealSolver(grid &primGuess,
                + geomCenter->gCov[mu][1] * BCon[1]
                + geomCenter->gCov[mu][2] * BCon[2]
                + geomCenter->gCov[mu][3] * BCon[3];
-    BCov[mu].eval();
+    //BCov[mu].eval();
   }
   array BSqr =   BCov[0]*BCon[0] + BCov[1]*BCon[1]
                + BCov[2]*BCon[2] + BCov[3]*BCon[3];
-  BSqr.eval();
+  //BSqr.eval();
 
   array QCov[NDIM];
-  QCov[0] = cons->vars[vars::U]  * lapse / g; QCov[0].eval();
-  QCov[1] = cons->vars[vars::U1] * lapse / g; QCov[1].eval();
-  QCov[2] = cons->vars[vars::U2] * lapse / g; QCov[2].eval();
-  QCov[3] = cons->vars[vars::U3] * lapse / g; QCov[3].eval();
+  QCov[0] = cons->vars[vars::U]  * lapse / g; //QCov[0].eval();
+  QCov[1] = cons->vars[vars::U1] * lapse / g; //QCov[1].eval();
+  QCov[2] = cons->vars[vars::U2] * lapse / g; //QCov[2].eval();
+  QCov[3] = cons->vars[vars::U3] * lapse / g; //QCov[3].eval();
 
   array QCon[NDIM];
   for (int mu=0; mu<NDIM; mu++)
@@ -359,7 +359,7 @@ void timeStepper::idealSolver(grid &primGuess,
                + geomCenter->gCon[mu][1] * QCov[1]
                + geomCenter->gCon[mu][2] * QCov[2]
                + geomCenter->gCon[mu][3] * QCov[3];
-    QCon[mu].eval();
+    //QCon[mu].eval();
   }
 
   array nCov[NDIM];
@@ -375,20 +375,20 @@ void timeStepper::idealSolver(grid &primGuess,
                + geomCenter->gCon[mu][1] * nCov[1]
                + geomCenter->gCon[mu][2] * nCov[2]
                + geomCenter->gCon[mu][3] * nCov[3];
-    nCon[mu].eval();
+    //nCon[mu].eval();
   }
 
   array QDotn =   QCov[0]*nCon[0] + QCov[1]*nCon[1]
                 + QCov[2]*nCon[2] + QCov[3]*nCon[3];
-  QDotn.eval();
+  //QDotn.eval();
 
   array QDotB =   QCov[0]*BCon[0] + QCov[1]*BCon[1]
                 + QCov[2]*BCon[2] + QCov[3]*BCon[3];
-  QDotB.eval();
+  //QDotB.eval();
   
   array QSqr =   QCov[0]*QCon[0] + QCov[1]*QCon[1]
                + QCov[2]*QCon[2] + QCov[3]*QCon[3];
-  QSqr.eval();
+  //QSqr.eval();
 
   array QTildeCon[NDIM];
   for (int mu=0; mu < NDIM; mu++)
@@ -444,7 +444,8 @@ void timeStepper::idealSolver(grid &primGuess,
   Wp  = Wp + af::max( af::min(dW, 2.0*Wp), -0.5*Wp );
   err = errFunc(BSqr, D, Ep, QDotB, QTildeSqr, Wp);
 
-  for (int iter=0; iter < 2; iter++)
+  // ITERMAX is 8 in harm code. Need break?
+  for (int iter=0; iter < 1; iter++)
   {
     dW  = (Wp1 - Wp)*err/(err - err1);
 
@@ -473,10 +474,26 @@ void timeStepper::idealSolver(grid &primGuess,
   primGuess.vars[vars::U3] =   (gamma/(W + BSqr))
                              * (QTildeCon[3] + QDotB*BCon[3]/W) ;
 
+
+  // Trivial fake version for testing 
+  /*primGuess.vars[vars::RHO] = elem->rho;
+  primGuess.vars[vars::U]   = elem->u;
+  primGuess.vars[vars::U1]  = elem->u1;
+  primGuess.vars[vars::U2]  = elem->u2;
+  primGuess.vars[vars::U3]  = elem->u3;*/
+
+  //for (int var=0; var <= vars::U3; var++)
+  //{
+  //  primGuess.vars[var].eval();
+  //}
+
+  std::vector<af::array *> arraysThatNeedEval{};
   for (int var=0; var <= vars::U3; var++)
   {
-    primGuess.vars[var].eval();
-  }
-
+    arraysThatNeedEval.push_back(&primGuess.vars[var]);
+  }                       
+  af::eval(arraysThatNeedEval.size(), &arraysThatNeedEval[0]);
+  
   return;
 }
+

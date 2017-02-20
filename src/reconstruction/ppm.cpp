@@ -149,8 +149,8 @@ void reconstruction::reconstructPPM(const grid &prim,
     // Base high-order PPM reconstruction
     array leftV = 0.5*(y2+y1)-1./6.*(DQ2-DQ1);
     array rightV = 0.5*(y3+y2)-1./6.*(DQ3-DQ2);
-    leftV.eval();
-    rightV.eval();
+    //leftV.eval();
+    //rightV.eval();
     
     // Corrections
     array corr1 = ((rightV-y2)*(y2-leftV)<=0.);
@@ -160,15 +160,19 @@ void reconstruction::reconstructPPM(const grid &prim,
     array corr3 = (qd*(qd+qe)<0.);
     leftV = leftV*(1.-corr1)+corr1*y2;
     rightV = rightV*(1.-corr1)+corr1*y2;
-    leftV.eval();
-    rightV.eval();
+    //leftV.eval();
+    //rightV.eval();
     
     leftV = leftV*(1.-corr2)+corr2*(3.*y2-2.*rightV);
     rightV = rightV*corr2+(1.-corr2)*rightV*(1.-corr3)+(1.-corr2)*corr3*(3.*y2-2.*leftV);
 
     primLeft.vars[var] = leftV;
     primRight.vars[var] = rightV;
-    primLeft.vars[var].eval();
-    primRight.vars[var].eval();
+    //primLeft.vars[var].eval();
+    //primRight.vars[var].eval();
+    std::vector<af::array *> toEval{};
+    toEval.push_back(&primLeft.vars[var]);
+    toEval.push_back(&primRight.vars[var]);
+    af::eval(toEval.size(), &toEval[0]);
   }
 }

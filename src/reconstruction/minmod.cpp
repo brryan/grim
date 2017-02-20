@@ -1,5 +1,6 @@
 #include "reconstruction.hpp"
 
+
 array reconstruction::minmod(array &x, array &y, array &z,
                              int &numReads, int &numWrites
                             )
@@ -23,8 +24,8 @@ array reconstruction::slopeMM(const int dir,const double dX, const array& in,
                               int &numWrites
                              )
 {
-  double filter1D[]  = {1,-1, 0, /* Forward difference */
-                        0, 1,-1  /* Backward difference */
+  double filter1D[]  = {1,-1, 0, // Forward difference
+                        0, 1,-1  // Backward difference 
                        };
   array filter;
   switch (dir)
@@ -41,14 +42,14 @@ array reconstruction::slopeMM(const int dir,const double dX, const array& in,
     	filter =  array(1, 1, 3, 2, filter1D)/dX;
     	break;
   }
-  
+ 
   array dvar_dX = convolve(in, filter);
   
   array forwardDiff  = dvar_dX(span, span, span, 0);
   array backwardDiff = dvar_dX(span, span, span, 1);
   array centralDiff  = backwardDiff + forwardDiff;
   
-  /* TODO: add an argument to slopeLimTheta.*/
+  // TODO: add an argument to slopeLimTheta.
   double slopeLimTheta = params::slopeLimTheta;
   array left   = slopeLimTheta * backwardDiff;
   array center = 0.5 * centralDiff;

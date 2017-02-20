@@ -106,63 +106,102 @@ void timeStepper::computeDivOfFluxes(const grid &primFlux,
       break;
 
     case 3:
+      double reconstructTime = 0.;
+      double riemannSolveTime = 0.;
+      double fluxCTTime = 0.;
+      double fluxFilterTime = 0.;
+
       /* directions:: X1 */
+      af::timer reconstructTimer = af::timer::start();
       reconstruction::reconstruct(primFlux, directions::X1,
                                   *primLeft, *primRight,
                                   numReadsReconstruction,
                                   numWritesReconstruction
                                  );
+      af::sync();
+      reconstructTime += af::timer::stop(reconstructTimer);
       numReads  = numReadsReconstruction;
       numWrites = numWritesReconstruction;
 
+      af::timer riemannSolveTimer = af::timer::start();
       riemann->solve(*primLeft, *primRight,
                      *geomLeft, *geomRight,
                      directions::X1, *fluxesX1,
                      numReadsRiemann, numWritesRiemann
                     );
+      af::sync();
+      riemannSolveTime += af::timer::stop(riemannSolveTimer);
       numReads  += numReadsRiemann;
       numWrites += numWritesRiemann;
 
       /* directions:: X2 */
+      reconstructTimer = af::timer::start();
       reconstruction::reconstruct(primFlux, directions::X2,
                                   *primLeft, *primRight,
                                   numReadsReconstruction,
                                   numWritesReconstruction
                                  );
+      af::sync();
+      reconstructTime += af::timer::stop(reconstructTimer);
       numReads  += numReadsReconstruction;
       numWrites += numWritesReconstruction;
 
+      riemannSolveTimer = af::timer::start();
       riemann->solve(*primLeft,   *primRight,
                      *geomBottom, *geomTop,
                      directions::X2, *fluxesX2,
                      numReadsRiemann, numWritesRiemann
                     );
+      af::sync();
+      riemannSolveTime += af::timer::stop(riemannSolveTimer);
       numReads  += numReadsRiemann;
       numWrites += numWritesRiemann;
 
       /* directions:: X3 */
+      reconstructTimer = af::timer::start();
       reconstruction::reconstruct(primFlux, directions::X3,
                                   *primLeft, *primRight,
                                   numReadsReconstruction,
                                   numWritesReconstruction
                                  );
+      af::sync();
+      reconstructTime += af::timer::stop(reconstructTimer);
       numReads  += numReadsReconstruction;
       numWrites += numWritesReconstruction;
 
+      riemannSolveTimer = af::timer::start();
       riemann->solve(*primLeft,   *primRight,
                      *geomCenter, *geomCenter,
                      directions::X3, *fluxesX3,
                      numReadsRiemann, numWritesRiemann
                     );
+      af::sync();
+      riemannSolveTime += af::timer::stop(riemannSolveTimer);
       numReads  += numReadsRiemann;
       numWrites += numWritesRiemann;
 
+      af::timer fluxCTTimer = af::timer::start();
       fluxCT(numReadsCT, numWritesCT);
+      af::sync();
+      fluxCTTime += af::timer::stop(fluxCTTimer);
       numReads  += numReadsCT;
       numWrites += numWritesCT;
 
+      af::timer fluxFilterTimer = af::timer::start();
       applyProblemSpecificFluxFilter(numReads,numWrites);
+      af::sync();
+      fluxFilterTime += af::timer::stop(fluxFilterTimer);
 
+      PetscPrintf(PETSC_COMM_WORLD, "       reconstruct  : %g secs %\n",    
+        reconstructTime); 
+      PetscPrintf(PETSC_COMM_WORLD, "       Riemann      : %g secs %\n",    
+        riemannSolveTime); 
+      PetscPrintf(PETSC_COMM_WORLD, "       Flux CT      : %g secs %\n",    
+        fluxCTTime); 
+      PetscPrintf(PETSC_COMM_WORLD, "       Filter  : %g secs %\n",    
+        fluxFilterTime); 
+
+      std::vector<af::array *> arraysThatNeedEval{};
       for (int var=0; var < primFlux.numVars; var++)
       {
         double filter1D[] = {1, -1, 0}; /* Forward difference */
@@ -176,8 +215,10 @@ void timeStepper::computeDivOfFluxes(const grid &primFlux,
         array dFluxX3_dX3 = convolve(fluxesX3->vars[var], filterX3);
 
         divFluxes->vars[var] = dFluxX1_dX1 + dFluxX2_dX2 + dFluxX3_dX3;
-        divFluxes->vars[var].eval();
+        //divFluxes->vars[var].eval();
+        arraysThatNeedEval.push_back(&divFluxes->vars[var]);
       }
+      af::eval(arraysThatNeedEval.size(), &arraysThatNeedEval[0]);
 
       break;
   }
